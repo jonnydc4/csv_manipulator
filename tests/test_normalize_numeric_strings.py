@@ -1,6 +1,5 @@
 import unittest
-from typing import List
-from main import normalize_numeric_strings
+from src.transformations.main import normalize_numeric_strings
 
 class TestNormalizeNumericStrings(unittest.TestCase):
 

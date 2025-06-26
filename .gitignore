@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE and editor files
+.vscode/
+.idea/
+.cursorrules/
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Environment variables
+.env
+
+# Data files
+*.csv.bak
+*.csv.tmp

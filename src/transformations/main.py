@@ -1,4 +1,6 @@
-from typing import List, Callable
+from typing import List, Callable, Any
+import copy
+
 
 def map_column(data, column, func):
     return True
@@ -8,7 +10,7 @@ def sum_column(data, old_name, new_name):
 
 def drop_column(data: List[List[str]], columns_to_drop: List[str]) -> List[List[str]]:
     """
-    Removes specified columns from a 2D list representing CSV data, including handling duplicate column names.
+    Removes specified columns from a 2D list representing CSV data.
     
     Args:
         data: List[List[str]] - A 2D list containing strings (CSV data)
@@ -16,67 +18,67 @@ def drop_column(data: List[List[str]], columns_to_drop: List[str]) -> List[List[
         
     Returns:
         List[List[str]] - A 2D list with the specified columns removed
+        
+    Edge Cases:
+        - Empty data or no headers: Returns original data
+        - Non-existent columns: Silently skipped
+        - Duplicate columns: All instances removed
     """
-
-    if not data:
+    if not data or not data[0]:
         return data
+    
+    new_data = copy.deepcopy(data)  # Preserve original data
+    headers = new_data[0]
+    
+    # Find indices to keep (handles duplicates automatically)
+    indices_to_keep = [i for i, header in enumerate(headers) if header not in columns_to_drop]
+    
+    # Update headers
+    new_data[0] = [headers[i] for i in indices_to_keep]
+    
+    # Update each data row, handling varying row lengths
+    for i in range(1, len(new_data)):
+        new_data[i] = [new_data[i][j] for j in indices_to_keep if j < len(new_data[i])]
+    
+    return new_data
 
-    # Collect all indices of columns to drop
-    indices_to_drop = []
-    for column in columns_to_drop:
-        indices = [i for i, col_name in enumerate(data[0]) if col_name == column]
-        if not indices:
-            print(f"Column {column} not found in data")
-        else:
-            indices_to_drop.extend(indices)
-
-    # Sort indices in reverse order to avoid shifting issues when popping
-    indices_to_drop = sorted(set(indices_to_drop), reverse=True)
-
-    # Remove the columns from the header row and each data row
-    for index in indices_to_drop:
-        data[0].pop(index)
-        for row in data[1:]:
-            row.pop(index)
-
-    return data
-
-def add_column(data: List[List[str]], column_name: str, func: Callable) -> List[List[str]]:
+def add_column(data: List[List[str]], column_name: str, func: Callable[[List[str]], Any]) -> List[List[str]]:
     """
     Adds a new column to the CSV data using a function to compute column values.
     
     Args:
         data: List[List[str]] - A 2D list containing strings (CSV data)
         column_name: str - The name of the new column to add
-        func: callable - A function that takes a row (List[str]) and returns a string value
+        func: Callable[[List[str]], Any] - A function that takes a row and returns a value
         
     Returns:
         List[List[str]] - A 2D list with the new column added
         
-    Examples:
-        >>> data = [["John", "25"], ["Jane", "30"]]
-        >>> def get_status(row): return "Adult" if int(row[1]) >= 18 else "Minor"
-        >>> add_column(data, "status", get_status)
-        [["John", "25", "Adult"], ["Jane", "30", "Adult"]]
-        
-        >>> def get_name_length(row): return str(len(row[0]))
-        >>> add_column(data, "name_length", get_name_length)
-        [["John", "25", "4"], ["Jane", "30", "4"]]
+    Raises:
+        ValueError: If the column_name already exists in the headers
     """
     if not data:
-        return data
+        return data  # Return original empty data, not empty list
     
-    # Add the column name to the header row (first row)
-    if data:
-        data[0].append(column_name)
+    new_data = copy.deepcopy(data)  # Preserve original data
+    headers = new_data[0]
+    
+    if column_name in headers:
+        raise ValueError(f"Column '{column_name}' already exists")
+    
+    # Add the column name to the header row
+    headers.append(column_name)
     
     # Add computed values to each data row
-    for i in range(1, len(data)):
-        row = data[i]
-        new_value = func(row)
-        row.append(str(new_value))
+    for i in range(1, len(new_data)):
+        row = new_data[i]
+        try:
+            new_value = func(row)
+            row.append(str(new_value))
+        except Exception:
+            row.append("")  # Default on error
     
-    return data
+    return new_data
 
 def normalize_numeric_strings(data: List[List[str]]) -> List[List[str]]:
     """
